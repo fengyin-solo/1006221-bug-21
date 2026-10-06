@@ -77,27 +77,24 @@ import {
   downloadEntries,
   listEntries,
   moduleMeta,
+  moduleStatCards,
   runAction as applyAction,
+  statusSummary as statusSummaryOf,
 } from '@/api/local-service'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('overhaul')
-const columns = ["工作票号", "检修机组", "检修级别", "计划工期", "实际工期", "工作负责人", "验收人员", "检修状态"]
+const columns = meta.fields
 const actions = ["提交审批", "开工检修", "办理完工"]
-const statuses = ["待审批", "已批准", "检修中", "已完工"]
-const stats = [{"label": "待审批工作票", "value": 0}, {"label": "检修中机组", "value": 0}, {"label": "已完工检修", "value": 0}]
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)
 const errorMessage = ref('')
+const stats = ref<{ label: string; value: number }[]>([])
+const statusSummaryRows = ref<{ status: string; count: number }[]>([])
 const filters = ref<Record<string, string>>({})
 const filterFields = columns.slice(0, 3)
-const statusSummary = computed(() =>
-  statuses.map((status: string) => ({
-    status,
-    count: rows.value.filter((row) => String(row.status) === status).length,
-  })),
-)
+const statusSummary = computed(() => statusSummaryRows.value)
 
 function resetFilters() {
   filters.value = {}
@@ -128,6 +125,8 @@ function reload() {
     const payload = listEntries(meta.key, filters.value)
     rows.value = payload.items
     total.value = payload.total
+    stats.value = moduleStatCards(meta.key)
+    statusSummaryRows.value = statusSummaryOf(meta.key)
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '机组检修列表读取失败'
   }
