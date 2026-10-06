@@ -24,6 +24,19 @@
       </span>
     </p>
 
+    <section v-if="todos.length" class="panel">
+      <h3 class="panel-title">检修待办清单（与励磁提醒事项同源）</h3>
+      <ul class="panel-list">
+        <li v-for="item in todos" :key="item.id" class="panel-item">
+          <span class="panel-badge" :class="{ done: item.状态 === '已完成' }">{{ item.状态 }}</span>
+          <span class="panel-text">{{ item.结论 }}</span>
+          <button class="link" type="button" @click="toggleTodo(item)">
+            {{ item.状态 === '已完成' ? '重新打开' : '标记完成' }}
+          </button>
+        </li>
+      </ul>
+    </section>
+
     <form class="filter-bar" @submit.prevent="reload">
       <label v-for="field in filterFields" :key="field" class="filter-item">
         <span>{{ field }}</span>
@@ -76,10 +89,12 @@ import { computed, onMounted, ref } from 'vue'
 import {
   downloadEntries,
   listEntries,
+  listReminders,
   moduleMeta,
   runAction as applyAction,
+  setReminderDone,
 } from '@/api/local-service'
-import type { EntryRow } from '@/data/types'
+import type { EntryRow, Reminder } from '@/data/types'
 
 const meta = moduleMeta('overhaul')
 const columns = ["工作票号", "检修机组", "检修级别", "计划工期", "实际工期", "工作负责人", "验收人员", "检修状态"]
@@ -91,6 +106,7 @@ const rows = ref<EntryRow[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
+const todos = ref<Reminder[]>([])
 const filterFields = columns.slice(0, 3)
 const statusSummary = computed(() =>
   statuses.map((status: string) => ({
@@ -122,12 +138,23 @@ function runAction(action: string, row: EntryRow) {
   reload()
 }
 
+function toggleTodo(item: Reminder) {
+  errorMessage.value = ''
+  const result = setReminderDone(Number(item.id), item.状态 !== '已完成')
+  if (!result.ok) {
+    errorMessage.value = result.message
+    return
+  }
+  reload()
+}
+
 function reload() {
   errorMessage.value = ''
   try {
     const payload = listEntries(meta.key, filters.value)
     rows.value = payload.items
     total.value = payload.total
+    todos.value = listReminders()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '机组检修列表读取失败'
   }

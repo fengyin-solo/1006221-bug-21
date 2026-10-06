@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "vue-tsc --noEmit"
+    "typecheck": "vue-tsc --noEmit",
+    "verify": "esbuild scripts/verify-excitation.ts --bundle --platform=node --format=esm --alias:@=./src --outfile=node_modules/.cache/verify-excitation.mjs && node node_modules/.cache/verify-excitation.mjs"
   },
   "dependencies": {
     "pinia": "^2.1.7",
